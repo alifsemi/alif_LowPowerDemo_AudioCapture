@@ -13,7 +13,7 @@
  * @author   : Ahmad Rashed
  * @email    : ahmad.rashed@alifsemi.com
  * @version  : V1.0.0
- * @date     : 10-Oct-2025
+ * @date     : 21-Oct-2025
  * @brief    : HE-only sample demo for LPI2S for E8 Devkit
  * @bug      : N/A
  * @Note     : None
@@ -32,18 +32,15 @@
 #include "retarget_init.h"
 #endif
 
-#include <pinconf.h>
-#include <Driver_SAI.h>
+#include "pinconf.h"
+#include "Driver_SAI.h"
 
 #define NUM_SAMPLES 48000
-
-int32_t ADC_Init(void);
-int32_t Receiver(void);
 
 /* Buffer for ADC samples */
 static uint32_t sample_buf[NUM_SAMPLES];
 
-#define DAC_SEND_COMPLETE_EVENT    (1U << 0)
+/* ADC callback events */
 #define ADC_RECEIVE_COMPLETE_EVENT (1U << 1)
 #define ADC_RECEIVE_OVERFLOW_EVENT (1U << 2)
 
@@ -119,7 +116,7 @@ static int32_t board_i2s_adc_pins_config(void)
  */
 static int32_t demo_power_config(void)
 {
-    uint32_t error_code;
+    uint32_t error_code = SERVICES_REQ_SUCCESS;
     uint32_t service_error_code;
 
     run_profile_t runp = {0};
@@ -147,9 +144,7 @@ static int32_t demo_power_config(void)
 #endif
 
     /* disable SE power domain */
-    error_code = SERVICES_power_se_sleep_req(se_services_s_handle,
-                                              0,
-                                              &service_error_code);
+    error_code = SERVICES_power_se_sleep_req(se_services_s_handle, 0, &service_error_code);
     if (error_code) {
         printf("SE: secure enclave power down error = %" PRId32 "\n", error_code);
     }
@@ -159,8 +154,8 @@ static int32_t demo_power_config(void)
 }
 
 /**
- * @fn      static int32_t demo_clocks_config(void)
- * @brief   Configure MCU clock and power for the demo
+ * @fn      static int32_t restore_clocks_config(void)
+ * @brief   Restore MCU clock and power prior to running the demo
  * @retval  execution status.
  */
 static int32_t restore_power_config(void)
@@ -195,18 +190,13 @@ static int32_t restore_power_config(void)
 
 /**
   \fn          int32_t ADC_Init(void)
-  \brief       ADC routine to initialize ADC
+  \brief       routine to initialize ADC
   \param[in]   None
   \return      status
 */
 int32_t ADC_Init(void)
 {
-    int32_t              status;
-
-    /*
-     * NOTE: The I2S ADC pins used in this test application are not configured
-     * in the board support library.Therefore, it is being configured manually here.
-     */
+    int32_t status;
     status = board_i2s_adc_pins_config();
     if (status != 0) {
         printf("Error in pin-mux configuration: %" PRId32 "\n", status);
