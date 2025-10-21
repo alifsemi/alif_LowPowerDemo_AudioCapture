@@ -1,0 +1,22 @@
+project:
+  groups:
+    - group: App
+      files:
+        - file: demo_lpi2s.c
+  output:
+    base-name: $Project$
+    type:
+      - elf
+      - bin
+  layers:
+    - layer: ../device/ensemble/alif-ensemble.clayer.yml
+    - layer: ../device/ensemble/alif-stdio.clayer.yml
+  packs:
+    - pack: ARM::CMSIS
+    - pack: ARM::CMSIS-Compiler@^2.0.0
+    - pack: AlifSemiconductor::Ensemble@^2.0.2
+  components:
+    - component: CMSIS Driver:SAI
+    - component: Device:SOC Peripherals:DMA
+    - component: CMSIS Driver:I2C
+    - component: Device:SOC Peripherals:PDM
