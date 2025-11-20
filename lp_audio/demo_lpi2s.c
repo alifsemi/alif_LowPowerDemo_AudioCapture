@@ -13,7 +13,7 @@
  * @author   : Ahmad Rashed
  * @email    : ahmad.rashed@alifsemi.com
  * @version  : V1.0.0
- * @date     : 21-Oct-2025
+ * @date     : 11-Nov-2025
  * @brief    : HE-only sample demo for LPI2S for E8 Devkit
  * @bug      : N/A
  * @Note     : None
@@ -34,10 +34,14 @@
 
 #include "pinconf.h"
 #include "Driver_SAI.h"
+#include "debug_clks.h"
+
+/* optional, higher clock accuracy but adds ~1mW */
+#define USE_HFXO    0
 
 #define NUM_SAMPLES 48000
 
-/* Buffer for ADC samples */
+/* Buffer for PCM samples */
 static uint32_t sample_buf[NUM_SAMPLES];
 
 /* ADC callback events */
@@ -121,7 +125,13 @@ static int32_t demo_power_config(void)
 
     run_profile_t runp = {0};
     runp.aon_clk_src = CLK_SRC_LFXO;        // change to LFRC if LFXO is not present
+#if USE_HFXO
+    runp.run_clk_src = CLK_SRC_HFXO;
+    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_XO_MHZ;
+#else
     runp.run_clk_src = CLK_SRC_HFRC;
+    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
+#endif
     runp.dcdc_mode = DCDC_MODE_PFM_FORCED;  // PFM is used at low loads
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
@@ -165,7 +175,13 @@ static int32_t restore_power_config(void)
 
     run_profile_t runp = {0};
     runp.aon_clk_src = CLK_SRC_LFXO;        // change to LFRC if LFXO is not present
+#if USE_HFXO
+    runp.run_clk_src = CLK_SRC_HFXO;
+    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_XO_MHZ;
+#else
     runp.run_clk_src = CLK_SRC_HFRC;
+    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
+#endif
     runp.dcdc_mode = DCDC_MODE_PWM;         // PWM is used at typical loads
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
@@ -186,6 +202,9 @@ static int32_t restore_power_config(void)
         printf("SE: clk enable error = %" PRId32 "\n", error_code);
     }
 #endif
+
+    /* clear the request for DEBUG and SYSTOP power domains from the M55 side */
+    *(volatile uint32_t*)0x1A010400 = 0;
 }
 
 /**
@@ -281,9 +300,9 @@ int main(void)
     }
 #endif
 
-    printf("Low Power Demo: Audio Capture\n");
+    printf("Low Power Demo: Audio Capture using LP-I2S\n");
     printf("MCU is being placed in a low power state\n");
-    printf("Secure Enclave will be powered down\n");
+    printf("Secure Enclave and JTAG will be powered down\n");
 
     /* Initialize the SE services */
     se_services_port_init();
@@ -311,8 +330,8 @@ int main(void)
             printf("ADC Receive failed status = %" PRId32 "\n", status);
             WAIT_FOREVER_LOOP;
         }
-        printf("ADC Receive count = %" PRId32 "\n", ++count);
-    } while ((count < 200) && (status == 0));
+        printf("ADC Receive loop count = %" PRId32 "\n", ++count);
+    } while ((count < 100) && (status == 0));
 
     /* disable Receiver */
     status = i2s_adc->Control(ARM_SAI_CONTROL_RX, 0, 0);
@@ -325,11 +344,10 @@ int main(void)
     i2s_adc->Uninitialize();
 
     restore_power_config();
-    printf("MCU power state is restored\n");
+    printf("MCU power state and JTAG are restored\n");
     printf("Secure Enclave is running\n");
 
+    /* Application will be waiting here upon JTAG "attach" or "pause" */
     WAIT_FOREVER_LOOP;
     return 0;
 }
-
-/************************ (C) COPYRIGHT ALIF SEMICONDUCTOR *****END OF FILE****/
