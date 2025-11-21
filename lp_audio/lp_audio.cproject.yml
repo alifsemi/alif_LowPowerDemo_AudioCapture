@@ -3,6 +3,11 @@ project:
     - group: App
       files:
         - file: demo_lpi2s.c
+          for-context: +E8-HE
+        - file: demo_lppdm.c
+          for-context: +E1C-HE
+  add-path:
+    - .
   output:
     base-name: $Project$
     type:

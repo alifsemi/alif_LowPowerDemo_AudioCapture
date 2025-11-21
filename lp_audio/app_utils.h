@@ -26,7 +26,7 @@
 extern "C" {
 #endif
 
-#define WAIT_FOREVER_LOOP               while(1);
+#define WAIT_FOREVER_LOOP               while(1) pm_core_enter_deep_sleep();
 
 #define APP_ERROR                       (-1)
 #define APP_SUCCESS                     (0)
