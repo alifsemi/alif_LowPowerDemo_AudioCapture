@@ -6,6 +6,8 @@ project:
           for-context: +E8-HE
         - file: demo_lppdm.c
           for-context: +E1C-HE
+        - file: wake_lpgpio.c
+        - file: wake_lptimer.c
   add-path:
     - .
   output:

@@ -236,6 +236,18 @@ static int32_t demo_power_config(void)
         printf("SE: run profile error = %" PRId32 "\n", error_code);
     }
 
+    off_profile_t offp = {0};
+    offp.aon_clk_src = CLK_SRC_LFXO;
+    offp.memory_blocks = SERAM_MASK;
+    offp.wakeup_events = EWIC_VBAT_TIMER | EWIC_VBAT_GPIO;
+    offp.wakeup_events = WE_LPTIMER | WE_LPGPIO;
+    offp.vtor_address = SCB->VTOR;
+
+    error_code = SERVICES_set_off_cfg(se_services_s_handle, &offp, &service_error_code);
+    if (error_code) {
+        printf("SE: run profile error = %" PRId32 "\n", error_code);
+    }
+
 #if SOC_FEAT_CLK76P8M_CLK_ENABLE
     /* enable the HFOSCx2 clock used by I2S */
     error_code = SERVICES_clocks_enable_clock(se_services_s_handle,
@@ -269,8 +281,8 @@ static int32_t restore_power_config(void)
 
     run_profile_t runp = {0};
     runp.aon_clk_src = CLK_SRC_LFXO;        // change to LFRC if LFXO is not present
-    runp.run_clk_src = CLK_SRC_HFXO;
-    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_XO_MHZ;
+    runp.run_clk_src = CLK_SRC_HFRC;
+    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
     runp.power_domains = PD_DBSS_MASK | PD_SYST_MASK;
@@ -549,7 +561,12 @@ int main()
     printf("MCU power state and JTAG are restored\n");
     printf("Secure Enclave is running\n");
 
-    /* Application will be waiting here upon JTAG "attach" */
-    WAIT_FOREVER_LOOP;
+    sys_busy_loop_us(100000);
+
+    /* Nothing left to do, place the MCU in STOP Mode */
+    extern void lptimer_init();
+    lptimer_init();
+    while(1) pm_core_enter_deep_sleep_request_subsys_off();
+
     return 0;
 }
