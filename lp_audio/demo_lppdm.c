@@ -239,7 +239,7 @@ static int32_t demo_power_config(void)
     off_profile_t offp = {0};
     offp.aon_clk_src = CLK_SRC_LFXO;
     offp.memory_blocks = SERAM_MASK;
-    offp.wakeup_events = EWIC_VBAT_TIMER | EWIC_VBAT_GPIO;
+    offp.ewic_cfg = EWIC_VBAT_TIMER | EWIC_VBAT_GPIO;
     offp.wakeup_events = WE_LPTIMER | WE_LPGPIO;
     offp.vtor_address = SCB->VTOR;
 
