@@ -37,9 +37,9 @@
 #include "Driver_PDM.h"
 
 /* optional, higher clock accuracy but adds ~1mW */
-#define USE_HFXO                       0
+#define USE_HFXO                       1
 
-#define PLAYBACK_ENABLED               0
+#define PLAYBACK_ENABLED               1
 #if PLAYBACK_ENABLED
 #include "demo_playback.h"
 #endif
@@ -482,7 +482,7 @@ void pdm_demo()
 
     printf("\n------> Start Speaking or Play some Audio!------> \n");
 
-    int32_t count = 20;
+    int32_t count = 200;
     while(count-- > 0) {
         /* Receive the audio samples */
         call_back_event = 0;
