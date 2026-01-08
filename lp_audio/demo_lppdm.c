@@ -39,6 +39,11 @@
 /* optional, higher clock accuracy but adds ~1mW */
 #define USE_HFXO                       0
 
+#define PLAYBACK_ENABLED               0
+#if PLAYBACK_ENABLED
+#include "demo_playback.h"
+#endif
+
 #define NUM_SAMPLES 16000   /* 500 ms at 16kHz (stereo) */
 
 #define CHANNEL_0                      4
@@ -238,6 +243,9 @@ static int32_t demo_power_config(void)
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
     // runp.power_domains = PD_DBSS_MASK;   // uncomment this line to enable JTAG
+#if PLAYBACK_ENABLED
+    runp.power_domains |= PD_SYST_MASK;
+#endif
 
     error_code = SERVICES_set_run_cfg(se_services_s_handle, &runp, &service_error_code);
     if (error_code) {
@@ -501,6 +509,10 @@ void pdm_demo()
         if (call_back_event == PDM_CALLBACK_AUDIO_DETECTION_EVENT) {
             printf("\n PDM audio detect event: data in the audio channel");
         }
+
+#if PLAYBACK_ENABLED
+        playback_audio((const void *)sample_buf, NUM_SAMPLES);
+#endif
     }
 
     call_back_event = 0;
@@ -546,7 +558,13 @@ int main()
     demo_power_config();
 
     /* Begin the demo Application */
+#if PLAYBACK_ENABLED
+    playback_init();
     pdm_demo();
+    playback_deinit();
+#else
+    pdm_demo();
+#endif
 
     restore_power_config();
     printf("MCU power state and JTAG are restored\n");

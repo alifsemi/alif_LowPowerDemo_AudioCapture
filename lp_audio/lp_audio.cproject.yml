@@ -2,6 +2,7 @@ project:
   groups:
     - group: App
       files:
+        - file: demo_playback.c
         - file: demo_lpi2s.c
           for-context: +E8-HE
         - file: demo_lppdm.c
@@ -25,3 +26,4 @@ project:
     - component: Device:SOC Peripherals:DMA
     - component: CMSIS Driver:I2C
     - component: Device:SOC Peripherals:PDM
+    - component: BSP:External peripherals:WM8904 CODEC
