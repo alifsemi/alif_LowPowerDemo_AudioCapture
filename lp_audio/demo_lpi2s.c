@@ -34,12 +34,11 @@
 
 #include "pinconf.h"
 #include "Driver_SAI.h"
-#include "debug_clks.h"
 
 /* optional, higher clock accuracy but adds ~1mW */
 #define USE_HFXO    0
 
-#define NUM_SAMPLES 48000
+#define NUM_SAMPLES 48000   /* 500 ms at 48kHz (stereo) */
 
 /* Buffer for PCM samples */
 static uint32_t sample_buf[NUM_SAMPLES];
@@ -75,8 +74,7 @@ static void adc_callback(uint32_t event)
 
 /**
  * @fn      static int32_t board_i2s_adc_pins_config(void)
- * @brief   Configure I2S ADC pinmux which is not
- *          handled by the board support library.
+ * @brief   Configure I2S ADC pinmux.
  * @retval  execution status.
  */
 static int32_t board_i2s_adc_pins_config(void)
@@ -114,7 +112,7 @@ static int32_t board_i2s_adc_pins_config(void)
 }
 
 /**
- * @fn      static int32_t demo_clocks_config(void)
+ * @fn      static int32_t demo_power_config(void)
  * @brief   Configure MCU clock and power for the demo
  * @retval  execution status.
  */
@@ -164,7 +162,7 @@ static int32_t demo_power_config(void)
 }
 
 /**
- * @fn      static int32_t restore_clocks_config(void)
+ * @fn      static int32_t restore_power_config(void)
  * @brief   Restore MCU clock and power prior to running the demo
  * @retval  execution status.
  */
@@ -182,7 +180,7 @@ static int32_t restore_power_config(void)
     runp.run_clk_src = CLK_SRC_HFRC;
     runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
 #endif
-    runp.dcdc_mode = DCDC_MODE_PWM;         // PWM is used at typical loads
+    runp.dcdc_mode = DCDC_MODE_PWM; /* PWM is used at typical loads (field is ignored on E1C / B1) */
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
     runp.power_domains = PD_DBSS_MASK | PD_SYST_MASK;
@@ -216,20 +214,21 @@ static int32_t restore_power_config(void)
 int32_t ADC_Init(void)
 {
     int32_t status;
+
     status = board_i2s_adc_pins_config();
     if (status != 0) {
         printf("Error in pin-mux configuration: %" PRId32 "\n", status);
         return status;
     }
 
-    /* Initializes I2S interface */
+    /* Initialize I2S driver */
     status = i2s_adc->Initialize(adc_callback);
     if (status) {
         printf("ADC Init failed status = %" PRId32 "\n", status);
         return status;
     }
 
-    /* Enable the power for I2S */
+    /* Enable clock/power for peripheral */
     status = i2s_adc->PowerControl(ARM_POWER_FULL);
     if (status) {
         printf("ADC Power failed status = %" PRId32 "\n", status);
@@ -292,7 +291,7 @@ int main(void)
 {
     sys_busy_loop_us(100000);
 
-    /* driver uses SystemCoreClock variable for calculating UART baud rate divider */
+    /* UART driver uses SystemCoreClock variable to calculate baud rate divider */
     SystemCoreClock = 76800000;
 #if defined(RTE_CMSIS_Compiler_STDOUT_Custom)
     if (stdout_init() != ARM_DRIVER_OK) {
@@ -308,7 +307,7 @@ int main(void)
     se_services_port_init();
     demo_power_config();
 
-
+    /* Begin the demo Application */
     int32_t status;
     status = ADC_Init();
     if (status) {

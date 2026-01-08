@@ -30,13 +30,12 @@
 #include "RTE_Components.h"
 #if defined(RTE_CMSIS_Compiler_STDOUT)
 #include "retarget_init.h"
-#include "retarget_stdout.h"
-#endif /* RTE_CMSIS_Compiler_STDOUT */
+#endif
 
 #include "pinconf.h"
 #include "Driver_PDM.h"
 
-#define NUM_SAMPLES 16000
+#define NUM_SAMPLES 16000   /* 500 ms at 16kHz (stereo) */
 
 #define CHANNEL_0                      4
 #define CHANNEL_1                      5
@@ -130,8 +129,7 @@ static void PDM_fifo_callback(uint32_t event)
 
 /**
  * @fn      static int32_t board_lppdm_pins_config(void)
- * @brief   Configure LPPDM pinmux which not
- *          handled by the board support library.
+ * @brief   Configure LPPDM pinmux.
  * @retval  execution status.
  */
 static int32_t board_lppdm_pins_config(void)
@@ -214,7 +212,7 @@ static int32_t board_lppdm_pins_config(void)
 }
 
 /**
- * @fn      static int32_t demo_clocks_config(void)
+ * @fn      static int32_t demo_power_config(void)
  * @brief   Configure MCU clock and power for the demo
  * @retval  execution status.
  */
@@ -258,7 +256,7 @@ static int32_t demo_power_config(void)
 }
 
 /**
- * @fn      static int32_t restore_clocks_config(void)
+ * @fn      static int32_t restore_power_config(void)
  * @brief   Restore MCU clock and power prior to running the demo
  * @retval  execution status.
  */
@@ -269,8 +267,9 @@ static int32_t restore_power_config(void)
 
     run_profile_t runp = {0};
     runp.aon_clk_src = CLK_SRC_LFXO;        // change to LFRC if LFXO is not present
-    runp.run_clk_src = CLK_SRC_HFXO;
-    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_XO_MHZ;
+    runp.run_clk_src = CLK_SRC_HFRC;
+    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
+    runp.dcdc_mode = DCDC_MODE_PWM; /* PWM is used at typical loads (field is ignored on E1C / B1) */
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
     runp.power_domains = PD_DBSS_MASK | PD_SYST_MASK;
@@ -296,8 +295,8 @@ static int32_t restore_power_config(void)
 }
 
 /**
- * @fn         : void PDM_fifo_callback(uint32_t event)
- * @brief      : PDM fifo callback
+ * @fn         : void pdm_demo()
+ * @brief      : PDM demo application
  *               -> Initialize the LPPDM module.
  *               -> Enable the Power for the LPPDM module
  *               -> Select the mode of operation in Control API.The
@@ -321,26 +320,24 @@ static int32_t restore_power_config(void)
  */
 void pdm_demo()
 {
-    int32_t ret;
+    int32_t status;
 
-    printf("\r\n >>> PDM demo starting up!!! <<< \r\n");
-
-    ret = board_lppdm_pins_config();
-    if (ret != 0) {
-        printf("Error in pin-mux configuration: %" PRId32 "\n", ret);
+    status = board_lppdm_pins_config();
+    if (status != 0) {
+        printf("Error in pin-mux configuration: %" PRId32 "\n", status);
         return;
     }
 
     /* Initialize PDM driver */
-    ret = PDMdrv->Initialize(PDM_fifo_callback);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Initialize(PDM_fifo_callback);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM init failed\n");
         return;
     }
 
-    /* Enable the power for PDM */
-    ret = PDMdrv->PowerControl(ARM_POWER_FULL);
-    if (ret != ARM_DRIVER_OK) {
+    /* Enable clock/power for peripheral */
+    status = PDMdrv->PowerControl(ARM_POWER_FULL);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Power up failed\n");
         goto error_uninitialize;
     }
@@ -352,52 +349,52 @@ void pdm_demo()
      * (ARM_PDM_MASK_CHANNEL_2 | ARM_PDM_MASK_CHANNEL_3)
      * Note: These macros are defined in Driver_PDM.h.
      */
-    ret = PDMdrv->Control(ARM_PDM_SELECT_CHANNEL,
+    status = PDMdrv->Control(ARM_PDM_SELECT_CHANNEL,
                           (CHANNEL_MASKS),
                           0);
-    if (ret != ARM_DRIVER_OK) {
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM channel select control failed\n");
         goto error_poweroff;
     }
 
     /* Select Standard voice PDM mode */
-    ret = PDMdrv->Control(ARM_PDM_MODE, ARM_PDM_MODE_AUDIOFREQ_16K_DECM_48, 0);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_MODE, ARM_PDM_MODE_AUDIOFREQ_16K_DECM_48, 0);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Standard voice control mode failed\n");
         goto error_poweroff;
     }
 
     /* Select the DC blocking IIR filter */
-    ret = PDMdrv->Control(ARM_PDM_BYPASS_IIR_FILTER, ENABLE, 0);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_BYPASS_IIR_FILTER, ENABLE, 0);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM DC blocking IIR control failed\n");
         goto error_poweroff;
     }
 
     /* Set Channel 0 Phase value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_PHASE, CHANNEL_0, CH0_PHASE);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_PHASE, CHANNEL_0, CH0_PHASE);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 0 Gain value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_GAIN, CHANNEL_0, CH0_GAIN);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_GAIN, CHANNEL_0, CH0_GAIN);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 0 Peak detect threshold value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_TH, CHANNEL_0, CH0_PEAK_DETECT_TH);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_TH, CHANNEL_0, CH0_PEAK_DETECT_TH);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 0 Peak detect ITV value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_ITV, CHANNEL_0, CH0_PEAK_DETECT_ITV);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_ITV, CHANNEL_0, CH0_PEAK_DETECT_ITV);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
@@ -408,36 +405,36 @@ void pdm_demo()
            sizeof(pdm_coef_reg.ch_fir_coef)); /* Channel 0 fir coefficient */
     pdm_coef_reg.ch_iir_coef = 0x00000004;    /* Channel IIR Filter Coefficient */
 
-    ret = PDMdrv->Config(&pdm_coef_reg);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Config(&pdm_coef_reg);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 1 Phase value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_PHASE, CHANNEL_1, CH1_PHASE);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_PHASE, CHANNEL_1, CH1_PHASE);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 1 Gain value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_GAIN, CHANNEL_1, CH1_GAIN);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_GAIN, CHANNEL_1, CH1_GAIN);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 1 Peak detect threshold value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_TH, CHANNEL_1, CH1_PEAK_DETECT_TH);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_TH, CHANNEL_1, CH1_PEAK_DETECT_TH);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
 
     /* Set Channel 1 Peak detect ITV value */
-    ret = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_ITV, CHANNEL_1, CH1_PEAK_DETECT_ITV);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Control(ARM_PDM_CHANNEL_PEAK_DETECT_ITV, CHANNEL_1, CH1_PEAK_DETECT_ITV);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
@@ -449,8 +446,8 @@ void pdm_demo()
            sizeof(pdm_coef_reg.ch_fir_coef)); /* Channel 1 fir coefficient*/
     pdm_coef_reg.ch_iir_coef = 0x00000004;    /* Channel IIR Filter Coefficient */
 
-    ret = PDMdrv->Config(&pdm_coef_reg);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Config(&pdm_coef_reg);
+    if (status != ARM_DRIVER_OK) {
         printf("\r\n Error: PDM Channel_Config failed\n");
         goto error_uninitialize;
     }
@@ -461,8 +458,8 @@ void pdm_demo()
     while(count-- > 0) {
         /* Receive the audio samples */
         call_back_event = 0;
-        ret = PDMdrv->Receive((uint16_t *) sample_buf, NUM_SAMPLES);
-        if (ret != ARM_DRIVER_OK) {
+        status = PDMdrv->Receive((uint16_t *) sample_buf, NUM_SAMPLES);
+        if (status != ARM_DRIVER_OK) {
             printf("\r\n Error: PDM Receive failed\n");
             goto error_capture;
         }
@@ -496,37 +493,23 @@ void pdm_demo()
 
 error_capture:
 error_poweroff:
-    ret = PDMdrv->PowerControl(ARM_POWER_OFF);
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->PowerControl(ARM_POWER_OFF);
+    if (status != ARM_DRIVER_OK) {
         printf("\n Error: PDM power off failed\n");
     }
 
 error_uninitialize:
-    ret = PDMdrv->Uninitialize();
-    if (ret != ARM_DRIVER_OK) {
+    status = PDMdrv->Uninitialize();
+    if (status != ARM_DRIVER_OK) {
         printf("\n Error: PDM Uninitialize failed\n");
     }
-
-#if SOC_FEAT_CLK76P8M_CLK_ENABLE
-    /* disable the HFOSCx2 clock */
-    error_code = SERVICES_clocks_enable_clock(se_services_s_handle,
-                                              CLKEN_HFOSCx2,
-                                              false,
-                                              &service_error_code);
-    if (error_code) {
-        printf("SE Error: HFOSCx2 clk disable = %" PRIu32 "\n", error_code);
-    }
-#endif
-
-    printf("\r\n XXX PDM demo exiting XXX...\r\n");
 }
 
-/* Define main entry point.  */
 int main()
 {
     sys_busy_loop_us(100000);
 
-    /* driver uses SystemCoreClock variable for calculating UART baud rate divider */
+    /* UART driver uses SystemCoreClock variable to calculate baud rate divider */
     SystemCoreClock = 76800000;
 #if defined(RTE_CMSIS_Compiler_STDOUT_Custom)
     if (stdout_init() != ARM_DRIVER_OK) {
@@ -542,7 +525,7 @@ int main()
     se_services_port_init();
     demo_power_config();
 
-    /* Enter the demo Application */
+    /* Begin the demo Application */
     pdm_demo();
 
     restore_power_config();
