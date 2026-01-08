@@ -27,6 +27,7 @@
 /* Project Includes */
 #include "app_utils.h"
 #include "board_config.h"
+#include "clock_runtime.h"
 #include "RTE_Components.h"
 #if defined(RTE_CMSIS_Compiler_STDOUT)
 #include "retarget_init.h"
@@ -36,7 +37,7 @@
 #include "Driver_SAI.h"
 
 /* optional, higher clock accuracy but adds ~1mW */
-#define USE_HFXO    0
+#define USE_HFXO                       0
 
 #define NUM_SAMPLES 48000   /* 500 ms at 48kHz (stereo) */
 
@@ -140,6 +141,11 @@ static int32_t demo_power_config(void)
         printf("SE: run profile error = %" PRId32 "\n", error_code);
     }
 
+    error_code = system_update_clock_values();
+    if (error_code) {
+        printf("SE: update clock values error = %" PRId32 "\n", error_code);
+    }
+
 #if SOC_FEAT_CLK76P8M_CLK_ENABLE
     /* enable the HFOSCx2 clock used by I2S */
     error_code = SERVICES_clocks_enable_clock(se_services_s_handle,
@@ -173,13 +179,8 @@ static int32_t restore_power_config(void)
 
     run_profile_t runp = {0};
     runp.aon_clk_src = CLK_SRC_LFXO;        // change to LFRC if LFXO is not present
-#if USE_HFXO
-    runp.run_clk_src = CLK_SRC_HFXO;
-    runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_XO_MHZ;
-#else
     runp.run_clk_src = CLK_SRC_HFRC;
     runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
-#endif
     runp.dcdc_mode = DCDC_MODE_PWM; /* PWM is used at typical loads (field is ignored on E1C / B1) */
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
@@ -188,6 +189,11 @@ static int32_t restore_power_config(void)
     error_code = SERVICES_set_run_cfg(se_services_s_handle, &runp, &service_error_code);
     if (error_code) {
         printf("SE: run profile error = %" PRId32 "\n", error_code);
+    }
+
+    error_code = system_update_clock_values();
+    if (error_code) {
+        printf("SE: update clock values error = %" PRId32 "\n", error_code);
     }
 
 #if SOC_FEAT_CLK76P8M_CLK_ENABLE
