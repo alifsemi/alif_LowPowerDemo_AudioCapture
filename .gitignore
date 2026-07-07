@@ -4,3 +4,5 @@ tmp/
 *.cbuild-run.yml
 *.cbuild.yml
 *.clangd
+cmsis.json
+settings.json
