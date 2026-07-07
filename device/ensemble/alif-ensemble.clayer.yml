@@ -11,14 +11,9 @@ layer:
     - component: Services:Secure Enclave:core&Source
     - component: Services:Secure Enclave:Initialization Helper&Source
     - component: AlifSemiconductor::BSP:Board Config
-    - component: AlifSemiconductor::BSP:DevKit Config&DevKit-e7
-      for-context:
-        - +E7-HE
-        - +E7-HP
     - component: AlifSemiconductor::BSP:DevKit Config&DevKit-e8
       for-context:
         - +E8-HE
-        - +E8-HP
     - component: AlifSemiconductor::BSP:DevKit Config&DevKit-e1c
       for-context:
         - +E1C-HE
