@@ -28,8 +28,10 @@
 #include "app_utils.h"
 #include "board_config.h"
 #include "clock_runtime.h"
+#include "se_services_port.h"
 #include "RTE_Components.h"
-#if defined(RTE_CMSIS_Compiler_STDOUT)
+#if defined(RTE_CMSIS_Compiler_STDIN) || defined(RTE_CMSIS_Compiler_STDOUT)
+#include "retarget_config.h"
 #include "retarget_init.h"
 #endif
 
@@ -230,9 +232,11 @@ static int32_t demo_power_config(void)
 #if USE_HFXO
     runp.run_clk_src = CLK_SRC_HFXO;
     runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_XO_MHZ;
+    runp.scaled_clk_freq = SCALED_FREQ_XO_LOW_DIV_38_4_MHZ;
 #else
     runp.run_clk_src = CLK_SRC_HFRC;
     runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
+    runp.scaled_clk_freq = SCALED_FREQ_RC_ACTIVE_76_8_MHZ;
 #endif
     runp.dcdc_mode = DCDC_MODE_PFM_FORCED;  // PFM is used at low loads
     runp.dcdc_voltage = DCDC_VOUT_0800;
@@ -284,6 +288,7 @@ static int32_t restore_power_config(void)
     runp.aon_clk_src = CLK_SRC_LFXO;        // change to LFRC if LFXO is not present
     runp.run_clk_src = CLK_SRC_HFRC;
     runp.cpu_clk_freq = CLOCK_FREQUENCY_76_8_RC_MHZ;
+    runp.scaled_clk_freq = SCALED_FREQ_RC_ACTIVE_76_8_MHZ;
     runp.dcdc_mode = DCDC_MODE_PWM; /* PWM is used at typical loads (field is ignored on E1C / B1) */
     runp.dcdc_voltage = DCDC_VOUT_0800;
     runp.memory_blocks = MRAM_MASK | BACKUP4K_MASK;
