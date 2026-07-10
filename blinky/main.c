@@ -4,26 +4,22 @@
 #include "Driver_IO.h"
 #include "board_config.h"
 
+#if defined(ENSEMBLE_SOC_E1C)
+#include "pinconf.h"
+#endif
+
 #define _GET_DRIVER_REF(ref, peri, chan) \
     extern ARM_DRIVER_##peri Driver_##peri##chan; \
     static ARM_DRIVER_##peri * ref = &Driver_##peri##chan;
 #define GET_DRIVER_REF(ref, peri, chan) _GET_DRIVER_REF(ref, peri, chan)
 
-#if defined(BOARD_RGB_LED_INSTANCE) && (BOARD_RGB_LED_INSTANCE == 0)
-    GET_DRIVER_REF(gpio_b, GPIO, BOARD_LEDRGB0_B_GPIO_PORT);
-    GET_DRIVER_REF(gpio_g, GPIO, BOARD_LEDRGB0_G_GPIO_PORT);
-    GET_DRIVER_REF(gpio_r, GPIO, BOARD_LEDRGB0_R_GPIO_PORT);
-    #define BOARD_LEDRGB_B_GPIO_PIN BOARD_LEDRGB0_B_GPIO_PIN
-    #define BOARD_LEDRGB_G_GPIO_PIN BOARD_LEDRGB0_G_GPIO_PIN
-    #define BOARD_LEDRGB_R_GPIO_PIN BOARD_LEDRGB0_R_GPIO_PIN
-#else
-    GET_DRIVER_REF(gpio_b, GPIO, BOARD_LEDRGB1_B_GPIO_PORT);
-    GET_DRIVER_REF(gpio_g, GPIO, BOARD_LEDRGB1_G_GPIO_PORT);
-    GET_DRIVER_REF(gpio_r, GPIO, BOARD_LEDRGB1_R_GPIO_PORT);
-    #define BOARD_LEDRGB_B_GPIO_PIN BOARD_LEDRGB1_B_GPIO_PIN
-    #define BOARD_LEDRGB_G_GPIO_PIN BOARD_LEDRGB1_G_GPIO_PIN
-    #define BOARD_LEDRGB_R_GPIO_PIN BOARD_LEDRGB1_R_GPIO_PIN
-#endif
+GET_DRIVER_REF(gpio_b, GPIO, BOARD_LEDRGB0_B_GPIO_PORT);
+GET_DRIVER_REF(gpio_g, GPIO, BOARD_LEDRGB0_G_GPIO_PORT);
+GET_DRIVER_REF(gpio_r, GPIO, BOARD_LEDRGB0_R_GPIO_PORT);
+#define BOARD_LEDRGB_B_GPIO_PIN BOARD_LEDRGB0_B_GPIO_PIN
+#define BOARD_LEDRGB_G_GPIO_PIN BOARD_LEDRGB0_G_GPIO_PIN
+#define BOARD_LEDRGB_R_GPIO_PIN BOARD_LEDRGB0_R_GPIO_PIN
+
 int main (void)
 {
     // Initialize pinmuxes
@@ -31,6 +27,11 @@ int main (void)
     if (ret != 0) {
         while(1);
     }
+
+/* In E1C LED_B pin is muxed to JTAG_TCLK by default. Change it to LED_B for this example */
+#if defined(ENSEMBLE_SOC_E1C)
+    pinconf_set(BOARD_LEDRGB0_B_GPIO_PORT, BOARD_LEDRGB_B_GPIO_PIN, PINMUX_ALTERNATE_FUNCTION_0, PADCTRL_OUTPUT_DRIVE_STRENGTH_4MA);
+#endif
 
     gpio_b->Initialize(BOARD_LEDRGB_B_GPIO_PIN, NULL);
     gpio_b->PowerControl(BOARD_LEDRGB_B_GPIO_PIN, ARM_POWER_FULL);
@@ -42,7 +43,7 @@ int main (void)
     gpio_r->SetDirection(BOARD_LEDRGB_R_GPIO_PIN, GPIO_PIN_DIRECTION_OUTPUT);
     gpio_r->SetValue(BOARD_LEDRGB_R_GPIO_PIN, GPIO_PIN_OUTPUT_STATE_LOW);
 
-    #ifdef CORE_M55_HE
+#if defined(RTSS_HE)
     SysTick_Config(SystemCoreClock/10);
 #else
     SysTick_Config(SystemCoreClock/25);
@@ -53,7 +54,7 @@ int main (void)
 
 void SysTick_Handler (void)
 {
-#ifdef CORE_M55_HE
+#if defined(RTSS_HE)
     gpio_b->SetValue(BOARD_LEDRGB_B_GPIO_PIN, GPIO_PIN_OUTPUT_STATE_TOGGLE);
 #else
     gpio_r->SetValue(BOARD_LEDRGB_R_GPIO_PIN, GPIO_PIN_OUTPUT_STATE_TOGGLE);
@@ -66,3 +67,7 @@ int _close(int val) TRAP_RET_ZERO
 int _lseek(int val0, int val1, int val2) TRAP_RET_ZERO
 int _read(int val0, char * val1, int val2) TRAP_RET_ZERO
 int _write(int val0, char * val1, int val2) TRAP_RET_ZERO
+int _fstat(int val0, void * val1) TRAP_RET_ZERO
+int _isatty(int val0) TRAP_RET_ZERO
+int _getpid(void) TRAP_RET_ZERO
+int _kill(int val0, int val1) TRAP_RET_ZERO

@@ -1,4 +1,4 @@
-/* Copyright (C) 2024 Alif Semiconductor - All Rights Reserved.
+/* Copyright (C) 2026 Alif Semiconductor - All Rights Reserved.
  * Use, distribution and modification of this code is permitted under the
  * terms stated in the Alif Semiconductor Software License Agreement
  *
@@ -7,35 +7,32 @@
  * contact@alifsemi.com, or visit: https://alifsemi.com/license
  *
  */
-#include <time.h>
-
-#include "RTE_Components.h"
-#include CMSIS_device_header
 
 #include <stdio.h>
 
-#include "board_config.h"
-#include "uart_tracelib.h"
-#include "fault_handler.h"
+#include <alif.h>
+#include <RTE_Components.h>
 
-static void uart_callback(uint32_t event)
-{
-}
+#if defined(RTE_CMSIS_Compiler_STDOUT_Custom)
+#include <retarget_config.h>
+#include <retarget_init.h>
+#endif
 
-int main (void)
+int main(void)
 {
-    // Initialize pinmuxes
-    int32_t ret = board_pins_config();
-    if (ret != 0) {
-        while(1);
+#if defined(RTE_CMSIS_Compiler_STDOUT_Custom)
+    if (stdout_init() != 0) {
+        while (1) {
+            __WFE();
+        }
     }
 
-    // Use common_app_utils for printing
-    tracelib_init(NULL, uart_callback);
-
-    fault_dump_enable(true);
-
     printf("\r\nHello World!\r\n");
+#endif
 
-    while (1) __WFE();
+    while (1) {
+        __WFE();
+    }
+
+    return 0;
 }

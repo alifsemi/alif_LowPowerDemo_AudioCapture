@@ -1,18 +1,9 @@
-# yaml-language-server: $schema=https://raw.githubusercontent.com/Open-CMSIS-Pack/devtools/tools/projmgr/2.6.0/tools/projmgr/schemas/cproject.schema.json
+# yaml-language-server: $schema=https://raw.githubusercontent.com/Open-CMSIS-Pack/devtools/tools/projmgr/2.12.0/tools/projmgr/schemas/cproject.schema.json
 project:
   groups:
     - group: App
       files:
         - file: main.c
-    - group: Trace
-      files:
-        - file: ../libs/common_app_utils/logging/uart_tracelib.c
-        - file: ../libs/common_app_utils/logging/retarget.c
-        - file: ../libs/common_app_utils/fault_handler/fault_handler.c
-
-  add-path:
-    - ../libs/common_app_utils/logging
-    - ../libs/common_app_utils/fault_handler
 
   output:
     base-name: $Project$
@@ -24,4 +15,9 @@ project:
     - layer: ../device/ensemble/alif-ensemble.clayer.yml
 
   packs:
-    - pack: AlifSemiconductor::Ensemble
+    - pack: ARM::CMSIS-Compiler@^2.0.0
+    - pack: AlifSemiconductor::Ensemble@2.1.0
+  components:
+    - component: ARM::CMSIS-Compiler:CORE
+    - component: ARM::CMSIS-Compiler:STDOUT:Custom
+    - component: AlifSemiconductor::Services:Retarget IO:STDOUT
