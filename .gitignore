@@ -1,8 +1,10 @@
 out/
 tmp/
+*.bak
 *.cbuild-idx.yml
 *.cbuild-run.yml
 *.cbuild.yml
 *.clangd
+RTE_Components.h
 cmsis.json
 settings.json
