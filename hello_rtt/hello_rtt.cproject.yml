@@ -28,4 +28,4 @@ project:
     - layer: ../device/ensemble/alif-ensemble.clayer.yml
 
   packs:
-    - pack: AlifSemiconductor::Ensemble@2.1.0
+    - pack: AlifSemiconductor::Ensemble@2.2.0

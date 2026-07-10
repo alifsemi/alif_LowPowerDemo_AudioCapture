@@ -19,7 +19,7 @@ project:
   packs:
     - pack: ARM::CMSIS
     - pack: ARM::CMSIS-Compiler@^2.0.0
-    - pack: AlifSemiconductor::Ensemble@2.1.0
+    - pack: AlifSemiconductor::Ensemble@2.2.0
   components:
     - component: CMSIS Driver:SAI
     - component: Device:SOC Peripherals:DMA
